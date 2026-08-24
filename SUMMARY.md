@@ -11,6 +11,7 @@
 ## Работа с объявлениями
 
 * [Мои объявления](listings/overview.md)
+* [Создание объявления с нуля (ИИ)](listings/create-from-scratch.md)
 * [Редактирование объявления](listings/editor.md)
 * [Гео-клоны по городам](listings/geo-clones.md)
 * [Автозагрузка и публикация](listings/autoload.md)
