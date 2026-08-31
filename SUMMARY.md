@@ -25,6 +25,7 @@
 ## Общение с клиентами
 
 * [Чаты и ИИ-ассистент](chats/assistant.md)
+* [Клиенты](chats/clients.md)
 * [Звонки](chats/calls.md)
 * [Агент ответов на отзывы](chats/reviews-agent.md)
 
