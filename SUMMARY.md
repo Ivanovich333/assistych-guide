@@ -19,6 +19,7 @@
 ## Продвижение
 
 * [Управление ставками](promotion/bids.md)
+* [Продвижение с прогнозом](promotion/forecast.md)
 * [Конвейер](promotion/conveyor.md)
 
 ## Общение с клиентами
