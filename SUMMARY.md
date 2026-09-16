@@ -67,3 +67,7 @@
 ## Настройки
 
 * [Настройки и API-ключи](settings/overview.md)
+
+## Что нового
+
+* [10–16 сентября 2026](changelog/README.md)
