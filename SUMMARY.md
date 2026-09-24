@@ -9,6 +9,16 @@
 * [Панель управления](getting-started/dashboard.md)
 * [Баланс](getting-started/balance.md)
 
+## Пошаговые инструкции
+
+* [С чего начать](instructions/README.md)
+  * [Первый запуск за 15 минут](instructions/01-pervyy-zapusk.md)
+  * [Научите агента своим ценам](instructions/02-nauchite-agenta-svoim-cenam.md)
+  * [Подключение каналов: Авито и Telegram](instructions/03-podklyuchenie-kanalov.md)
+  * [Запись клиентов](instructions/04-zapis-klientov.md)
+  * [Несколько агентов вместо одного](instructions/05-neskolko-agentov.md)
+  * [Агент отвечает не то — что делать](instructions/06-agent-otvechaet-ne-to.md)
+
 ## Агенты
 
 * [Агенты](agents/overview.md)
