@@ -22,6 +22,19 @@
 ## Агенты
 
 * [Агенты](agents/overview.md)
+* [Агент: настройка по блокам](guide/agent/README.md)
+  * [Как создать агента](guide/agent/01-kak-sozdat-agenta.md)
+  * [Инструкция агента (промпт)](guide/agent/02-instrukciya-agenta.md)
+  * [Настройки агента](guide/agent/03-nastroyki-agenta.md)
+  * [Версии промпта](guide/agent/04-versii-prompta.md)
+  * [База знаний](guide/agent/05-baza-znaniy.md)
+  * [Прайс-листы](guide/agent/06-prays-listy.md)
+  * [Правила маршрутизации](guide/agent/07-pravila-marshrutizacii.md)
+  * [Воронка продаж](guide/agent/08-voronka-prodazh.md)
+  * [Напоминания](guide/agent/09-napominaniya.md)
+  * [Песочница и отладка](guide/agent/10-pesochnica-i-otladka.md)
+  * [Анализ диалогов](guide/agent/11-analiz-dialogov.md)
+  * [Инструменты агента](guide/agent/12-instrumenty-agenta.md)
 
 ## Интеграции
 
@@ -44,6 +57,23 @@
 ## Менеджеры
 
 * [Менеджеры и роли](managers/overview.md)
+
+## Авито
+
+* [Авито: объявления и продвижение](guide/avito/README.md)
+  * [Обзор аккаунта](guide/avito/01-obzor.md)
+  * [Мои аккаунты](guide/avito/02-moi-akkaunty.md)
+  * [Мои объявления](guide/avito/03-moi-obyavleniya.md)
+  * [Выделение и массовые действия](guide/avito/04-massovye-deystviya.md)
+  * [Редактирование объявления](guide/avito/05-redaktirovanie.md)
+  * [Автозагрузка](guide/avito/06-avtozagruzka.md)
+  * [Конвейер](guide/avito/07-konveyer.md)
+  * [Перепубликация](guide/avito/08-perepublikaciya.md)
+  * [Фото](guide/avito/09-foto.md)
+  * [Управление ставками](guide/avito/10-stavki.md)
+  * [Аналитика Авито](guide/avito/11-analitika.md)
+  * [Звонки](guide/avito/12-zvonki.md)
+  * [Профили клиентов](guide/avito/13-profili-klientov.md)
 
 ## Объявления
 
