@@ -8,6 +8,7 @@
 * [Подключение Авито](getting-started/connect-avito.md)
 * [Панель управления](getting-started/dashboard.md)
 * [Баланс](getting-started/balance.md)
+* [Client ID и Client Secret Авито](getting-started/avito-keys.md)
 
 ## Пошаговые инструкции
 
@@ -38,6 +39,7 @@
 
 ## Интеграции
 
+* [Как подключить Telegram, ВКонтакте, MAX и сайт](integrations/connect-channels.md)
 * [Telegram, MAX, ВКонтакте и виджет](integrations/messengers.md)
 * [Мини-приложение в Telegram и MAX](integrations/mini-app.md)
 
@@ -93,6 +95,7 @@
 
 ## Оплата
 
+* [Сколько стоит токен и тарифы](billing/token-price.md)
 * [Токены и пополнение](billing/tokens.md)
 * [Тариф и использование](billing/pricing.md)
 * [Частые вопросы](faq.md)
@@ -100,6 +103,7 @@
 ## Прайс-листы
 
 * [Прайс-листы](price-lists/overview.md)
+* [Прайс файлом: загрузка из Excel](price-lists/import-excel.md)
 
 ## Аналитика
 
