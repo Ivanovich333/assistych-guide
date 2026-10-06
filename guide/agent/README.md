@@ -5,7 +5,7 @@
 1. [Как создать агента](01-kak-sozdat-agenta.md)
 2. [Инструкция агента (промпт)](02-instrukciya-agenta.md)
 3. [Настройки агента](03-nastroyki-agenta.md)
-4. [Версии промпта](04-versii-prompta.md)
+4. [Изменения](04-versii-prompta.md)
 5. [База знаний](05-baza-znaniy.md)
 6. [Прайс-листы](06-prays-listy.md)
 7. [Правила маршрутизации](07-pravila-marshrutizacii.md)

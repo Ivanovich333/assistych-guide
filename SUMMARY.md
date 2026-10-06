@@ -27,7 +27,7 @@
   * [Как создать агента](guide/agent/01-kak-sozdat-agenta.md)
   * [Инструкция агента (промпт)](guide/agent/02-instrukciya-agenta.md)
   * [Настройки агента](guide/agent/03-nastroyki-agenta.md)
-  * [Версии промпта](guide/agent/04-versii-prompta.md)
+  * [Изменения](guide/agent/04-versii-prompta.md)
   * [База знаний](guide/agent/05-baza-znaniy.md)
   * [Прайс-листы](guide/agent/06-prays-listy.md)
   * [Правила маршрутизации](guide/agent/07-pravila-marshrutizacii.md)
