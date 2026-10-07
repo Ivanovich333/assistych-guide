@@ -42,6 +42,7 @@
 * [Как подключить Telegram, ВКонтакте, MAX и сайт](integrations/connect-channels.md)
 * [Telegram, MAX, ВКонтакте и виджет](integrations/messengers.md)
 * [Мини-приложение в Telegram и MAX](integrations/mini-app.md)
+* [Мониторинг чатов: подключение и интеграция с таск-менеджером](integrations/chat-monitoring.md)
 
 ## Общение с клиентами
 
