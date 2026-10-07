@@ -38,6 +38,15 @@
 
 Код привязки можно сменить в кабинете. После смены старый код перестаёт привязывать новые группы, уже подключённые остаются.
 
+То же из приложения по API. Заходить в кабинет не обязательно, всё кроме самой привязки делается из вашего приложения по ключу API (раздел 6):
+
+- ссылку «Добавить в группу» и команду `/connect` приложение получает запросом `GET /monitor/settings` (поля `connect_link` и `connect_command`, для MAX поле `max`) и показывает проджекту. Добавить бота в группу по ссылке или отправить команду должен администратор группы в Telegram или MAX: по API группу привязать нельзя, так подтверждается право администратора на переписку;
+- сотрудников агентства («наших») задаёт `PATCH /monitor/settings` с полем `staff`;
+- название клиента и отключение группы: `PATCH /monitor/chats/{id}` с полями `client_name` и `status` (`active` или `disabled`);
+- новый код привязки: `POST /monitor/settings/rotate-code`.
+
+Новая группа появляется в `GET /monitor/chats` через несколько секунд после привязки.
+
 ## 3. Импорт истории переписки
 
 Бот видит сообщения только с момента добавления. Более раннюю переписку можно загрузить из экспорта Telegram Desktop. Такие сообщения помечены в кабинете «из истории», а в API имеют `"source": "import"`. Сигналов по ним не создаётся.
@@ -60,6 +69,13 @@
 Ограничения. Для загрузки одной группы размер файла не больше 20 МБ. Если файл больше, выгрузите историю без медиа или за период. Группа должна быть уже подключена к боту, иначе импорт вернёт ошибку `CHAT_NOT_CONNECTED`. Если файл не является JSON-экспортом Telegram Desktop, будет ошибка `BAD_FILE`. Фото, видео и файлы из экспорта не загружаются: в API у них `media.state` равен `unavailable`.
 
 Что получится. Сообщения появятся в переписке группы и будут доступны через API. В конце загрузки отмечаются сотрудники: если больше всех в истории писали люди, не отмеченные как «наши», кабинет покажет их имена. Если это сотрудники агентства, добавьте их в список.
+
+То же из приложения по API. Результат такой же, как при загрузке из кабинета.
+
+- Одна группа: `POST /monitor/import`, в поле `file` файл `result.json` экспорта одного чата (до 20 МБ). Повтор того же файла ничего не задваивает.
+- Все группы из полного экспорта: файл целиком не отправляйте, в нём личные чаты. Сначала `POST /monitor/import/match` со списком `id` и `type` всех чатов экспорта: в ответе отмечены подключённые. Затем для каждой подключённой группы отправьте её сообщения в `POST /monitor/import` с полем `final=false`, большую группу частями от старых сообщений к новым. В конце один раз `POST /monitor/import/finish`: в ответе `top_unmarked`, те, кто много пишет и не отмечен «нашим».
+
+У загрузки свой лимит: 10 запросов в минуту, общий лимит API она не расходует. Ошибки те же, что в кабинете: `CHAT_NOT_CONNECTED`, `FILE_TOO_LARGE`, `BAD_FILE`, `FULL_ACCOUNT_EXPORT`.
 
 ## 4. Сигналы
 
@@ -157,7 +173,9 @@ def valid(body: bytes, header: str, api_key: str) -> bool:
 
 Авторизация: заголовок `X-API-Key: <ключ API бизнеса>`. Ключ находится в кабинете: «Настройки», «Ключ API». Владелец может перевыпустить ключ, после этого старый перестанет работать, а подпись вебхука будет считаться новым ключом.
 
-Лимит: 60 запросов в минуту на бизнес. В ответах есть заголовки `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`. При превышении возвращается `429 RATE_LIMITED` с заголовком `Retry-After`.
+Лимит: 60 запросов в минуту на бизнес. В ответах есть заголовки `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`. При превышении возвращается `429 RATE_LIMITED` с заголовком `Retry-After`. У загрузки истории `POST /monitor/import` отдельный лимит: 10 запросов в минуту.
+
+Через API доступно всё, что есть на странице «Мониторинг чатов» в кабинете, кроме самой привязки группы (раздел 2). Ключ одного бизнеса не видит группы, сигналы и настройки другого. По ключу нельзя перевыпустить сам ключ, удалить бизнес или изменить что-то вне мониторинга.
 
 Формат ошибки:
 
@@ -176,6 +194,14 @@ def valid(body: bytes, header: str, api_key: str) -> bool:
 | `PATCH /monitor/signals/{id}` | Отметить обработку | тело: `{"status": "new" \| "in_work" \| "done" \| "dismissed", "comment": "текст"}`; `comment` необязателен, до 2000 знаков |
 | `GET /monitor/export/signals.csv` | Выгрузка сигналов в CSV | `since`, `until` (дата или время ISO, по умолчанию последние 30 дней); `signal_type`, `status` через запятую |
 | `GET /monitor/export/chats.csv` | Сводка по группам за период в CSV | `since`, `until` |
+| `GET /monitor/settings` | Настройки: ссылка и команда привязки, «наши», виды сигналов, адрес вебхука | нет |
+| `PATCH /monitor/settings` | Изменить настройки | любые из полей: `staff` (юзернеймы `@name`, ссылки `t.me/...` или числовые id), `signal_types` (`negative`, `payment_due`, `report_request`, `question_unanswered`), `unanswered_hours` (1-72), `webhook_url` (`https://...`, пустая строка убирает адрес), `media_types` (`voice`, `photo`, `video`), `media_retention_days` (1-365) |
+| `POST /monitor/settings/rotate-code` | Новый код привязки | нет |
+| `POST /monitor/webhook/test` | Отправить тестовый сигнал `signal.test` на адрес вебхука | нет |
+| `PATCH /monitor/chats/{id}` | Название клиента, отключить или включить группу | тело: `{"client_name": "...", "status": "active" \| "disabled"}`, любое из полей |
+| `POST /monitor/import` | Загрузить историю одной группы | multipart: `file` (JSON экспорта Telegram Desktop, до 20 МБ), `final` (`false` для частей полного экспорта) |
+| `POST /monitor/import/match` | Какие чаты полного экспорта подключены | тело: `{"chats": [{"id": 1234567890, "type": "private_supergroup"}]}`, до 500 чатов |
+| `POST /monitor/import/finish` | Завершить загрузку полного экспорта | нет |
 
 Основные поля ответов.
 
@@ -190,6 +216,10 @@ def valid(body: bytes, header: str, api_key: str) -> bool:
 | `401 API_KEY_INVALID` | неверный или отсутствующий ключ |
 | `404 NOT_FOUND` | группа или сигнал не найдены либо принадлежат другому бизнесу |
 | `400 INVALID_ID` | идентификатор не является корректным UUID |
+| `400 INVALID_URL` | адрес вебхука не начинается с `http://` или `https://` |
+| `400 NO_WEBHOOK` | проверка вебхука, а адрес не задан |
+| `404 CHAT_NOT_CONNECTED` | группа из файла истории не подключена к вашему бизнесу |
+| `400 FILE_TOO_LARGE`, `400 BAD_FILE`, `400 FULL_ACCOUNT_EXPORT` | файл истории больше 20 МБ, не JSON-экспорт Telegram Desktop или экспорт всего аккаунта вместо одной группы |
 | `409 OPEN_SIGNAL_EXISTS` | сигнал нельзя вернуть в `new` или `in_work`, пока по группе открыт другой сигнал того же вида |
 | `422` | неверное тело запроса или параметры |
 | `429 RATE_LIMITED` | превышен лимит запросов |
@@ -224,6 +254,43 @@ curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/j
 curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/json" \
   -d '{"status": "done", "comment": "созвонились, вопрос решён"}' \
   "https://assistych.ru/api/v1/monitor/signals/<signal_id>"
+```
+
+Ссылка и команда привязки для проджекта:
+
+```
+curl -H "X-API-Key: $ASSISTYCH_API_KEY" \
+  "https://assistych.ru/api/v1/monitor/settings"
+```
+
+Сотрудники, виды сигналов и адрес вебхука:
+
+```
+curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/json" \
+  -d '{"staff": ["@alex_pm", "@expert_oleg"], "signal_types": ["negative", "payment_due", "question_unanswered"], "webhook_url": "https://tasks.example.com/webhooks/assistych"}' \
+  "https://assistych.ru/api/v1/monitor/settings"
+```
+
+Проверить вебхук:
+
+```
+curl -X POST -H "X-API-Key: $ASSISTYCH_API_KEY" \
+  "https://assistych.ru/api/v1/monitor/webhook/test"
+```
+
+Название клиента у группы:
+
+```
+curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/json" \
+  -d '{"client_name": "Ромашка ООО"}' \
+  "https://assistych.ru/api/v1/monitor/chats/<chat_id>"
+```
+
+Загрузить историю одной группы:
+
+```
+curl -X POST -H "X-API-Key: $ASSISTYCH_API_KEY" -F file=@result.json \
+  "https://assistych.ru/api/v1/monitor/import"
 ```
 
 Выгрузка CSV за сентябрь:
@@ -270,7 +337,7 @@ curl -H "X-API-Key: $ASSISTYCH_API_KEY" -o signals.csv \
 9. Добавьте сверку раз в 10 или 15 минут по `GET /monitor/signals?status=new&since=...` с постраничным чтением через `before=<id последнего элемента>`, пока `has_more` равно `true`.
 10. По желанию показывайте в задаче 10-20 последних сообщений группы (`GET /monitor/chats/{chat.id}/messages?limit=30`) и текст `media.text` рядом с сообщением. Не сохраняйте `media.url` надолго, он действует сутки.
 
-Соблюдайте лимит 60 запросов в минуту и при ответе 429 ждите `Retry-After` секунд. API только читает данные и отмечает статусы, писать в группы от имени Assistych через него нельзя.
+Соблюдайте лимит 60 запросов в минуту и при ответе 429 ждите `Retry-After` секунд. Через API читаются данные, отмечаются статусы и меняются настройки мониторинга (раздел 6), писать в группы от имени Assistych через него нельзя.
 
 ## 8. Ограничения и что дальше
 
