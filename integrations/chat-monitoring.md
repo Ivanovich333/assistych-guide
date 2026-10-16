@@ -91,13 +91,56 @@
 Правила:
 
 - Пачка сообщений классифицируется после 3 минут тишины в группе или после 20 сообщений. Все виды из одной пачки определяются одним вызовом модели. Сигнал создаётся при уверенности модели не ниже 0,6.
-- Для `question_unanswered` N задаётся в кабинете в поле «Сигнал через, рабочих часов» (по умолчанию 4, от 1 до 72). Рабочее время: будни с 10:00 до 19:00 по Москве. Любое сообщение сотрудника в группе после вопроса снимает ожидание.
+- Для `question_unanswered` N задаётся в кабинете в поле «Сигнал через, рабочих часов» (по умолчанию 4, от 1 до 72). Рабочее время: будни по Москве, по умолчанию с 10:00 до 19:00. Часы меняются через API: `PATCH /monitor/settings` с полями `work_start` и `work_end` (раздел 6). Любое сообщение сотрудника в группе после вопроса снимает ожидание.
 - Пока по группе есть открытый сигнал (`new` или `in_work`), новый сигнал того же вида не создаётся. Повторы считаются в поле `repeats` открытого сигнала. Сигналы разных видов друг другу не мешают.
 - Закрытый сигнал (`done` или `dismissed`) снимает это ограничение: следующий случай даст новый сигнал.
 
 Важно. Если ваше приложение написано по версии от 28.09.2026 и не смотрит на `signal_type`, сначала научите его различать виды, а потом включайте остальные. Иначе сигнал «Оплата» придёт задачей «Негатив».
 
 Статусы сигнала: `new` (только что создан), `in_work` (проджект взял), `done` (решено), `dismissed` (ложное срабатывание; по таким случаям мы улучшаем распознавание).
+
+## 4а. Проджекты: как разделить группы и сигналы
+
+У каждой группы есть проджект: сотрудник агентства, который ведёт этого клиента. Он приходит в поле `project` у группы, у сигнала и в вебхуке, поэтому сигналы можно раздавать по проджектам без ручного разбора.
+
+Как определяется проджект группы:
+
+1. Задан руками. `PATCH /monitor/chats/{id}` с телом `{"project": "@kkotri"}`. Так делайте, если проджект известен заранее, например по брифу продажника. В ответе `project_source` равен `manual`.
+2. Иначе автоматически. Проджектом считается тот сотрудник из списка `projects` в настройках, кто больше всех писал в группе за последние 30 дней. Если список `projects` пуст, выбор идёт среди всех «наших» (`staff`). В ответе `project_source` равен `auto`. Если за 30 дней никто из них в группе не писал, `project` и `project_source` равны `null`.
+
+Чтобы вернуть группу на автоматический выбор, отправьте `{"project": null}`.
+
+Проджект записывается в сигнал в момент его создания и потом не меняется. Если группу передали другому проджекту, новые сигналы пойдут новому, а уже созданные останутся у прежнего.
+
+Ник указывается так же, как в `staff`: `@username`, `username` или числовой id. В ответах юзернейм приходит в нижнем регистре и с `@`, например `@smmaleksandr`.
+
+Пример: два проджекта делят группы.
+
+```
+# 1. Кто у нас проджекты (продажники и эксперты в автоматический выбор не попадут)
+curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/json" \
+  -d '{"projects": ["@SMMAleksandr", "@kkotri"]}' \
+  "https://assistych.ru/api/v1/monitor/settings"
+
+# 2. Посмотреть, кому досталась какая группа
+curl -H "X-API-Key: $ASSISTYCH_API_KEY" "https://assistych.ru/api/v1/monitor/chats"
+#   "title": "Ромашка", "project": "@smmaleksandr", "project_source": "auto"
+
+# 3. Поправить руками, где автомат ошибся (например, новая группа после брифа)
+curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/json" \
+  -d '{"project": "@kkotri"}' \
+  "https://assistych.ru/api/v1/monitor/chats/<chat_id>"
+
+# 4. Каждый проджект забирает только свои открытые сигналы
+curl -H "X-API-Key: $ASSISTYCH_API_KEY" \
+  "https://assistych.ru/api/v1/monitor/signals?status=new,in_work&project=@kkotri"
+
+# сигналы групп без проджекта, их нужно распределить
+curl -H "X-API-Key: $ASSISTYCH_API_KEY" \
+  "https://assistych.ru/api/v1/monitor/signals?status=new&project=none"
+```
+
+В вебхуке `signal.created` проджект лежит в поле `project`. По нему приложение сразу ставит задачу нужному человеку.
 
 ## 5. Вебхук
 
@@ -130,6 +173,7 @@
     "title": "Ромашка / Агентство"
   },
   "client": {"name": "Ромашка"},
+  "project": "@smmaleksandr",
   "text": "за что мы вообще платим",
   "reason": "клиент недоволен результатом и сомневается в оплате",
   "link": "https://t.me/c/1234567890/5531",
@@ -144,6 +188,7 @@
 
 - `link` есть только у супергрупп Telegram. У обычных групп и у всех групп MAX он равен `null`.
 - `client.name` равен названию, которое вы вписали у группы в кабинете, иначе `null`.
+- `project` содержит проджекта группы на момент сигнала (раздел 4а) либо `null`, если проджект не определился.
 - Для групп MAX `platform` равен `max`, поля `telegram_*` равны `null`, идентификатор группы берите из `external_chat_id`.
 - Форма тела одинакова для всех видов сигналов.
 
@@ -189,25 +234,25 @@ def valid(body: bytes, header: str, api_key: str) -> bool:
 |---|---|---|
 | `GET /monitor/chats` | Список групп бизнеса | нет |
 | `GET /monitor/chats/{id}/messages` | Сообщения группы по возрастанию времени | `limit` (1-200, по умолчанию 50); `before=<id сообщения>`: страница старше; `after=<id сообщения>`: новее. Без курсора: последние сообщения |
-| `GET /monitor/signals` | Список сигналов, новые сверху | `status` (через запятую, например `new,in_work`); `signal_type` (через запятую); `chat_id`; `since` (время ISO: созданные или изменённые после); `limit` (1-200); `before=<id сигнала>`: следующая страница |
+| `GET /monitor/signals` | Список сигналов, новые сверху | `status` (через запятую, например `new,in_work`); `signal_type` (через запятую); `chat_id`; `project` (`@ник` проджекта или `none`: без проджекта); `since` (время ISO: созданные или изменённые после); `limit` (1-200); `before=<id сигнала>`: следующая страница |
 | `GET /monitor/signals/{id}` | Один сигнал | нет |
 | `PATCH /monitor/signals/{id}` | Отметить обработку | тело: `{"status": "new" \| "in_work" \| "done" \| "dismissed", "comment": "текст"}`; `comment` необязателен, до 2000 знаков |
 | `GET /monitor/export/signals.csv` | Выгрузка сигналов в CSV | `since`, `until` (дата или время ISO, по умолчанию последние 30 дней); `signal_type`, `status` через запятую |
 | `GET /monitor/export/chats.csv` | Сводка по группам за период в CSV | `since`, `until` |
 | `GET /monitor/settings` | Настройки: ссылка и команда привязки, «наши», виды сигналов, адрес вебхука | нет |
-| `PATCH /monitor/settings` | Изменить настройки | любые из полей: `staff` (юзернеймы `@name`, ссылки `t.me/...` или числовые id), `signal_types` (`negative`, `payment_due`, `report_request`, `question_unanswered`), `unanswered_hours` (1-72), `webhook_url` (`https://...`, пустая строка убирает адрес), `media_types` (`voice`, `photo`, `video`), `media_retention_days` (1-365) |
+| `PATCH /monitor/settings` | Изменить настройки | любые из полей: `staff` (юзернеймы `@name`, ссылки `t.me/...` или числовые id), `signal_types` (`negative`, `payment_due`, `report_request`, `question_unanswered`), `unanswered_hours` (1-72), `webhook_url` (`https://...`, пустая строка убирает адрес), `media_types` (`voice`, `photo`, `video`), `media_retention_days` (1-365), `projects` (ники проджектов, раздел 4а; `[]` значит все «наши»), `work_start` и `work_end` (рабочее время для `question_unanswered`, `"09:00"`, будни по Москве, начало раньше конца) |
 | `POST /monitor/settings/rotate-code` | Новый код привязки | нет |
 | `POST /monitor/webhook/test` | Отправить тестовый сигнал `signal.test` на адрес вебхука | нет |
-| `PATCH /monitor/chats/{id}` | Название клиента, отключить или включить группу | тело: `{"client_name": "...", "status": "active" \| "disabled"}`, любое из полей |
+| `PATCH /monitor/chats/{id}` | Название клиента, проджект группы, отключить или включить группу | тело: `{"client_name": "...", "project": "@ник" \| null, "status": "active" \| "disabled"}`, любое из полей; `project: null` возвращает автоматический выбор |
 | `POST /monitor/import` | Загрузить историю одной группы | multipart: `file` (JSON экспорта Telegram Desktop, до 20 МБ), `final` (`false` для частей полного экспорта) |
 | `POST /monitor/import/match` | Какие чаты полного экспорта подключены | тело: `{"chats": [{"id": 1234567890, "type": "private_supergroup"}]}`, до 500 чатов |
 | `POST /monitor/import/finish` | Завершить загрузку полного экспорта | нет |
 
 Основные поля ответов.
 
-- Группа (`items[]` в `/monitor/chats`): `id`, `platform` (`telegram` или `max`), `external_chat_id`, `telegram_chat_id` (у MAX `null`), `title`, `chat_type` (`group` или `supergroup`), `status` (`active`, `left`: бота удалили, `disabled`: отключили в кабинете), `client_name`, `bot_is_admin`, `sees_all_messages`, `open_signals`, `last_message_at`, `bound_at`.
+- Группа (`items[]` в `/monitor/chats`): `id`, `platform` (`telegram` или `max`), `external_chat_id`, `telegram_chat_id` (у MAX `null`), `title`, `chat_type` (`group` или `supergroup`), `status` (`active`, `left`: бота удалили, `disabled`: отключили в кабинете), `client_name`, `project` и `project_source` (`manual`, `auto` или `null`, раздел 4а), `bot_is_admin`, `sees_all_messages`, `open_signals`, `last_message_at`, `bound_at`.
 - Сообщение: `id`, `external_message_id`, `telegram_message_id`, `sender` (`name`, `username`, `external_user_id`, `telegram_user_id`, `is_staff`), `text`, `kind` (`text`, `photo`, `voice`, `video`, `video_note`, `document`, `sticker`, `audio`, `animation`, `other`), `media`, `source` (`bot` или `import`), `sent_at`, `edited_at`, `link`. В ответе также есть `has_more`.
-- Сигнал: `id`, `signal_type`, `status`, `confidence`, `text`, `reason`, `repeats`, `comment`, `chat`, `sender`, `message_id`, `link`, `ts`, `delivery` (`none`, `pending`, `sent`, `failed`), `delivery_attempts`, `delivery_error`, `created_at`, `updated_at`, `closed_at`. В списке также есть `has_more`.
+- Сигнал: `id`, `signal_type`, `status`, `confidence`, `text`, `reason`, `project`, `repeats`, `comment`, `chat`, `sender`, `message_id`, `link`, `ts`, `delivery` (`none`, `pending`, `sent`, `failed`), `delivery_attempts`, `delivery_error`, `created_at`, `updated_at`, `closed_at`. В списке также есть `has_more`.
 
 Коды ошибок:
 
@@ -218,6 +263,8 @@ def valid(body: bytes, header: str, api_key: str) -> bool:
 | `400 INVALID_ID` | идентификатор не является корректным UUID |
 | `400 INVALID_URL` | адрес вебхука не начинается с `http://` или `https://` |
 | `400 NO_WEBHOOK` | проверка вебхука, а адрес не задан |
+| `400 INVALID_PROJECT` | в `project` у группы передано несколько ников |
+| `400 INVALID_WORK_HOURS` | `work_start` не раньше `work_end` |
 | `404 CHAT_NOT_CONNECTED` | группа из файла истории не подключена к вашему бизнесу |
 | `400 FILE_TOO_LARGE`, `400 BAD_FILE`, `400 FULL_ACCOUNT_EXPORT` | файл истории больше 20 МБ, не JSON-экспорт Telegram Desktop или экспорт всего аккаунта вместо одной группы |
 | `409 OPEN_SIGNAL_EXISTS` | сигнал нельзя вернуть в `new` или `in_work`, пока по группе открыт другой сигнал того же вида |
@@ -260,6 +307,14 @@ curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/j
 
 ```
 curl -H "X-API-Key: $ASSISTYCH_API_KEY" \
+  "https://assistych.ru/api/v1/monitor/settings"
+```
+
+Рабочее время будни с 9:00 до 18:00:
+
+```
+curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/json" \
+  -d '{"work_start": "09:00", "work_end": "18:00"}' \
   "https://assistych.ru/api/v1/monitor/settings"
 ```
 
@@ -320,7 +375,7 @@ curl -H "X-API-Key: $ASSISTYCH_API_KEY" -o signals.csv \
 - `analysis` показывает разбор ИИ, если он включён в кабинете: `pending`, `done`, `failed`, `limit`, `skipped`, `too_large`, `null`. В поле `text` при `done` лежит расшифровка речи или описание фото. Этот же текст видит классификатор, поэтому голосовое «где отчёт?» даёт сигнал `report_request`.
 - По умолчанию файлы хранятся 30 дней, на бизнес выделено 2 ГБ. Когда место кончается, удаляются самые старые файлы. Сообщения остаются.
 
-Выгрузка CSV. Формат рассчитан на русский Excel: UTF-8 с BOM, разделитель `;`, время московское, не больше 20 000 строк за запрос. В Google Таблицах используйте «Файл», «Импорт», «Загрузить» и укажите разделитель «точка с запятой».
+Выгрузка CSV. Формат рассчитан на русский Excel: UTF-8 с BOM, разделитель `;`, время московское, не больше 20 000 строк за запрос. Последняя колонка обеих выгрузок, «Проджект», содержит ник без `@`. В Google Таблицах используйте «Файл», «Импорт», «Загрузить» и укажите разделитель «точка с запятой».
 
 ## 7. Инструкция для разработчика приложения
 
