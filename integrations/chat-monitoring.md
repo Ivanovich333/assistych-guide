@@ -112,11 +112,19 @@
 
 Проджект записывается в сигнал в момент его создания и потом не меняется. Если группу передали другому проджекту, новые сигналы пойдут новому, а уже созданные останутся у прежнего.
 
-Ник указывается так же, как в `staff`: `@username`, `username` или числовой id. В ответах юзернейм приходит в нижнем регистре и с `@`, например `@smmaleksandr`.
+Ник указывается так же, как в `staff`: `@username`, `username` или числовой id. В ответах юзернейм приходит в нижнем регистре и с `@`, например `@smmaleksandr`. Проджекты из `projects` автоматически добавляются в «наши».
+
+Как отметить всех сотрудников. Автоматический выбор и сигналы «без ответа» работают правильно, только если все сотрудники агентства (проджекты, авитологи, продажники, руководитель) есть в `staff`. Иначе их сообщения считаются сообщениями клиента. В загруженной истории Telegram у отправителя есть только id без ника. Assistych сам узнаёт ники через Telegram в течение нескольких часов после загрузки, но надёжнее отметить своих по списку отправителей:
+
+1. `GET /monitor/senders` возвращает всех, кто писал в группах за 60 дней. У каждого есть `name`, `username`, `external_user_id`, `messages`, `chats`, `is_staff` и `staff_key` (ник, а если ника нет, то `id:<число>`).
+2. Выберите сотрудников по именам и отправьте их `staff_key` одним запросом `PATCH /monitor/settings` с полем `staff`. `staff` заменяет список целиком, поэтому включите в него и тех, кто уже отмечен (`is_staff: true`).
 
 Пример: два проджекта делят группы.
 
 ```
+# 0. Кто пишет в группах: отметить своих в staff по staff_key
+curl -H "X-API-Key: $ASSISTYCH_API_KEY" "https://assistych.ru/api/v1/monitor/senders"
+
 # 1. Кто у нас проджекты (продажники и эксперты в автоматический выбор не попадут)
 curl -X PATCH -H "X-API-Key: $ASSISTYCH_API_KEY" -H "Content-Type: application/json" \
   -d '{"projects": ["@SMMAleksandr", "@kkotri"]}' \
@@ -173,14 +181,14 @@ curl -H "X-API-Key: $ASSISTYCH_API_KEY" \
     "title": "Ромашка / Агентство"
   },
   "client": {"name": "Ромашка"},
-  "project": "@smmaleksandr",
   "text": "за что мы вообще платим",
   "reason": "клиент недоволен результатом и сомневается в оплате",
   "link": "https://t.me/c/1234567890/5531",
   "sender": {"name": "Ирина", "username": "irina_r", "is_staff": false},
   "ts": "2026-09-28T09:41:07+00:00",
   "created_at": "2026-09-28T09:44:10+00:00",
-  "cabinet_url": "https://assistych.ru/ru/chat-monitor?signal=b6c1a3e2-0000-0000-0000-000000000000"
+  "cabinet_url": "https://assistych.ru/ru/chat-monitor?signal=b6c1a3e2-0000-0000-0000-000000000000",
+  "project": "@smmaleksandr"
 }
 ```
 
@@ -236,6 +244,7 @@ def valid(body: bytes, header: str, api_key: str) -> bool:
 | `GET /monitor/chats/{id}/messages` | Сообщения группы по возрастанию времени | `limit` (1-200, по умолчанию 50); `before=<id сообщения>`: страница старше; `after=<id сообщения>`: новее. Без курсора: последние сообщения |
 | `GET /monitor/signals` | Список сигналов, новые сверху | `status` (через запятую, например `new,in_work`); `signal_type` (через запятую); `chat_id`; `project` (`@ник` проджекта или `none`: без проджекта); `since` (время ISO: созданные или изменённые после); `limit` (1-200); `before=<id сигнала>`: следующая страница |
 | `GET /monitor/signals/{id}` | Один сигнал | нет |
+| `GET /monitor/senders` | Кто писал в группах: чтобы отметить своих в `staff` (раздел 4а) | `days` (1-365, по умолчанию 60); `chat_id` |
 | `PATCH /monitor/signals/{id}` | Отметить обработку | тело: `{"status": "new" \| "in_work" \| "done" \| "dismissed", "comment": "текст"}`; `comment` необязателен, до 2000 знаков |
 | `GET /monitor/export/signals.csv` | Выгрузка сигналов в CSV | `since`, `until` (дата или время ISO, по умолчанию последние 30 дней); `signal_type`, `status` через запятую |
 | `GET /monitor/export/chats.csv` | Сводка по группам за период в CSV | `since`, `until` |
