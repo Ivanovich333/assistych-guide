@@ -513,8 +513,11 @@ curl -H "X-API-Key: $ASSISTYCH_API_KEY" -o signals.csv \
 ```bash
 K="X-API-Key: <ключ>"; A=https://assistych.ru/api/v1/monitor
 
-# привязать номер: показать QR человеку, опрашивать раз в 2-3 секунды до status = open
-curl -s -X POST -H "$K" $A/whatsapp/connect
+# привязать номер: показать QR человеку, опрашивать раз в 2-3 секунды до status = open.
+# Для нового номера mode обязателен: work (рабочий) или personal (личный), без него 400 ACCOUNT_MODE_REQUIRED.
+# Если в ответе GET $A/whatsapp staff_notice_required = true, добавьте "staff_notified": true
+# (сотрудник письменно уведомлён о мониторинге номера), иначе 400 STAFF_NOTICE_REQUIRED.
+curl -s -X POST -H "$K" -H 'Content-Type: application/json' -d '{"mode": "work"}' $A/whatsapp/connect
 curl -s -H "$K" $A/whatsapp
 
 # чаты номера и выбор рабочих (полная замена набора, до 500); к нам попадают только выбранные
