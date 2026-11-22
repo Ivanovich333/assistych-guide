@@ -43,6 +43,7 @@
 * [Telegram, MAX, ВКонтакте и виджет](integrations/messengers.md)
 * [Мини-приложение в Telegram и MAX](integrations/mini-app.md)
 * [Мониторинг чатов: подключение и интеграция с таск-менеджером](integrations/chat-monitoring.md)
+* [amoCRM: установка из amoМаркета](integrations/amocrm.md)
 
 ## Общение с клиентами
 
@@ -87,9 +88,13 @@
 * [Гео-клоны по городам](listings/geo-clones.md)
 * [Автозагрузка и публикация](listings/autoload.md)
 
+## Маркетплейсы
+
+* [Карточки для WB и Ozon](marketplaces/cards.md)
+
 ## Продвижение
 
-* [Управление ставками](promotion/bids.md)
+* [Кампании ставок на Авито](promotion/bids.md)
 * [Продвижение с прогнозом](promotion/forecast.md)
 * [Конвейер](promotion/conveyor.md)
 * [Перепубликация](promotion/republish.md)
