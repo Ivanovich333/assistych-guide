@@ -44,6 +44,7 @@
 * [Мини-приложение в Telegram и MAX](integrations/mini-app.md)
 * [Мониторинг чатов: подключение и интеграция с таск-менеджером](integrations/chat-monitoring.md)
 * [amoCRM: установка из amoМаркета](integrations/amocrm.md)
+* [МойСклад и Авито](integrations/moysklad-avito.md)
 
 ## Общение с клиентами
 
